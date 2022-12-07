@@ -1,0 +1,14 @@
+source ~/shh_custom_profile
+sbatch -p dlcebatch1 west_simulations.sh
+
+sinfo --Node --long
+
+scp /Users/masonyoungblood/Documents/Work/'Spring 2022'/'Mourning Warblers'/MourningWarblers/simulations.R cdlce1:/data/users/youngblood/mourning_warblers/simulations.R 
+
+scp cdlce1:/data/users/youngblood/mourning_warblers/newf_simulations.RData  /Users/masonyoungblood/Documents/Work/'Spring 2022'/'Mourning Warblers'/MourningWarblers/newf_simulations.RData
+
+IN FILE
+
+#!/bin/bash
+
+Rscript west_simulations.R
