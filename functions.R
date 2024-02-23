@@ -1,38 +1,15 @@
 #create learning function
-learn <- function(ind, pop, grids, mig_mat, edge_birds, potential_migrants, geo, dems, rep_size, total_possible_syls, mu, frequency, attr, content, cutoff){
-  #compute how many migrant demonstrators a bird will learn from
-  if(edge_birds){
-    if(ind == 1){n_migrant_dems <- sum(sample(c(1, 0), dems[ind], replace = TRUE, prob = c(mig_mat[2, 1], 1-mig_mat[2, 1])))}
-    if(ind == 2){n_migrant_dems <- sum(sample(c(1, 0), dems[ind], replace = TRUE, prob = c(mig_mat[1, 2], 1-mig_mat[1, 2])))}
-    if(ind == 3){n_migrant_dems <- sum(sample(c(1, 0), dems[ind], replace = TRUE, prob = c(mig_mat[4, 3], 1-mig_mat[4, 3])))}
-    if(ind == 4){n_migrant_dems <- sum(sample(c(1, 0), dems[ind], replace = TRUE, prob = c(mig_mat[3, 4], 1-mig_mat[3, 4])))}
+learn <- function(ind, pop, grids, mig_mat, potential_migrants, geo, dems, rep_size, total_possible_syls, mu, frequency, attr, content, cutoff){
+  #if potential migrants is not an empty object, then bird will have one migrant demonstrator
+  if(!is.null(potential_migrants)){
+    #sample local demonstrators based on their geographic locations
+    local_dems <- sample(order(grids[[ind]]$dists[geo, pop[[ind]]$geo])[1:round((nrow(pop[[ind]])*cutoff))], dems[ind]-1)
+    
+    #get possible syllables, which includes all syllables from local demonstrators plus syllables from one migrant demonstrator
+    possible_syls <- c(pop[[ind]]$syls[local_dems], potential_migrants[sample(1:length(potential_migrants), 1)])
   } else{
-    n_migrant_dems <- 0
-  }
-  
-  #if all of their demonstrators are not migrants, then store the number of local demonstrators
-  if(n_migrant_dems < dems[ind]){
-    local_dems <- sample(order(grids[[ind]]$dists[geo, pop[[ind]]$geo])[1:round((nrow(pop[[ind]])*cutoff))], dems[ind]-n_migrant_dems)
-  }
-  
-  #if at least one demonstrator is a migrant but all are not, then combine possible syllables from local and migrant demonstrators
-  if(n_migrant_dems > 0 & n_migrant_dems < dems[ind]){
-    if(ind == 1){possible_syls <- c(pop[[ind]]$syls[local_dems], pop[[2]]$syls[sample(potential_migrants, n_migrant_dems)])}
-    if(ind == 2){possible_syls <- c(pop[[ind]]$syls[local_dems], pop[[1]]$syls[sample(potential_migrants, n_migrant_dems)])}
-    if(ind == 3){possible_syls <- c(pop[[ind]]$syls[local_dems], pop[[4]]$syls[sample(potential_migrants, n_migrant_dems)])}
-    if(ind == 4){possible_syls <- c(pop[[ind]]$syls[local_dems], pop[[3]]$syls[sample(potential_migrants, n_migrant_dems)])}
-  }
-  
-  #if all demonstrators are migrants, then only store those
-  if(n_migrant_dems == dems[ind]){
-    if(ind == 1){possible_syls <- pop[[2]]$syls[sample(potential_migrants, n_migrant_dems)]}
-    if(ind == 2){possible_syls <- pop[[1]]$syls[sample(potential_migrants, n_migrant_dems)]}
-    if(ind == 3){possible_syls <- pop[[4]]$syls[sample(potential_migrants, n_migrant_dems)]}
-    if(ind == 4){possible_syls <- pop[[3]]$syls[sample(potential_migrants, n_migrant_dems)]}
-  } 
-  
-  #if none of the demonstrators are migrants, then only store syllables from local demonstrators
-  if(n_migrant_dems == 0){
+    #otherwise, it is only local demonstrators
+    local_dems <- sample(order(grids[[ind]]$dists[geo, pop[[ind]]$geo])[1:round((nrow(pop[[ind]])*cutoff))], dems[ind])
     possible_syls <- pop[[ind]]$syls[local_dems]
   }
   
@@ -67,8 +44,17 @@ learn <- function(ind, pop, grids, mig_mat, edge_birds, potential_migrants, geo,
 #the model assumes that migration only occurs between west and east, and between newfoundland and nova scotia
 #specify model
 model <- function(n_init = c(1000, 1000, 1000, 1000), pop_rate = 0.989, mortality = 0.5, geo_res = list(c(50, 20), c(50, 20), c(10, 10), c(10, 10)), regio_dists,
-                  mig_mat = matrix(c(0, 0.077968, 0, 0, 0.051011, 0, 0, 0, 0, 0, 0, 0.006601, 0, 0, 0.008547, 0), 4, 4, dimnames = list(c("west", "east", "newf", "nova"), c("west", "east", "newf", "nova"))), 
-                  years = c(1985, 2006, 2018), inds_to_sample = list(c(60, 164, 181), c(76, 219, 227), c(47, 92, 100), c(13, 24, 32)), dems = c(3, 3, 3, 3), rep_size = 3, mu = 0.01, frequency = c(1, 1, 1, 1), content = c(0, 0, 0, 0), cutoff = 0.1){
+                  years = c(1985, 2006, 2018), inds_to_sample = list(c(60, 164, 181), c(76, 219, 227), c(47, 92, 100), c(13, 24, 32)), 
+                  dems = c(3, 3, 3, 3), rep_size = 3, mu = 0.01, frequency = c(1, 1, 1, 1), content = c(0, 0, 0, 0), cutoff = 0.1){
+  #set up immigration object, where rows are sources and columns are destinations, in the same order as geo_res
+  #imm_prob is the average probability of immigration
+  #source_edge is the edge of the source regiolect that birds are coming from (location of potential immigrant demonstrators)
+  #dest_edge is the edge of the destination regiolect that birds are going to (location of focal learners)
+  imm_prob <- matrix(c(0, 0.0675, 0, 0, 0.0471, 0, 0.0034, 0, 0, 0, 0, 0.0065, 0, 0, 0.0101, 0), 4, 4, dimnames = list(c("west", "east", "newf", "nova"), c("west", "east", "newf", "nova")))
+  source_edge <- matrix(c(NA, "L", NA, NA, "R", NA, "L", NA, NA, NA, NA, "T", NA, NA, "B", NA), 4, 4, dimnames = list(c("west", "east", "newf", "nova"), c("west", "east", "newf", "nova")))
+  dest_edge <- matrix(c(NA, "R", NA, NA, "L", NA, "R", NA, NA, NA, NA, "B", NA, NA, "T", NA), 4, 4, dimnames = list(c("west", "east", "newf", "nova"), c("west", "east", "newf", "nova")))
+  immigration <- list(imm_prob = imm_prob, source_edge = source_edge, dest_edge = dest_edge)
+  
   #calculate total number of possible syllables
   total_possible_syls <- length(regio_dists[[1]])
   
@@ -76,10 +62,6 @@ model <- function(n_init = c(1000, 1000, 1000, 1000), pop_rate = 0.989, mortalit
   grids <- lapply(1:4, function(x){
     temp <- expand.grid(1:geo_res[[x]][1], 1:geo_res[[x]][2])
     colnames(temp) <- c("x", "y")
-    if(x == 1){temp$edge <- ifelse(temp$x == geo_res[[x]][1], 1, 0)}
-    if(x == 2){temp$edge <- ifelse(temp$x == 1, 1, 0)}
-    if(x == 3){temp$edge <- ifelse(temp$y == 1, 1, 0)}
-    if(x == 4){temp$edge <- ifelse(temp$y == geo_res[[x]][2], 1, 0)}
     dists <- as.matrix(dist(temp[, c(1:2)]))
     return(list(coords = temp, dists = dists))
   })
@@ -115,18 +97,41 @@ model <- function(n_init = c(1000, 1000, 1000, 1000), pop_rate = 0.989, mortalit
       #sample new geographic indices
       geos <- sample(prod(geo_res[[x]]), pop_sizes[[x]][i]-nrow(pop[[x]]), replace = TRUE)
       
-      #identify which new birds are on the edge of the territory
-      if(x %in% c(1, 2)){edge_birds <- order(abs(grids[[x]]$coords$x[geos] - unique(grids[[x]]$coords$x[which(grids[[x]]$coords$edge == 1)])))[1:round((nrow(pop[[x]])*cutoff))]}
-      if(x %in% c(3, 4)){edge_birds <- order(abs(grids[[x]]$coords$y[geos] - unique(grids[[x]]$coords$y[which(grids[[x]]$coords$edge == 1)])))[1:round((nrow(pop[[x]])*cutoff))]}
+      #get number of immigrants from each regiolect
+      num_imm_per_regio <- round(immigration$imm_prob[, x]*(pop_sizes[[x]][i]-nrow(pop[[x]])))
       
-      #identify which old birds are on the edge of the neighboring territory
-      if(x == 1){potential_migrants <- order(abs(grids[[2]]$coords$x[geos] - unique(grids[[2]]$coords$x[which(grids[[2]]$coords$edge == 1)])))[1:round((nrow(pop[[2]])*cutoff))]}
-      if(x == 2){potential_migrants <- order(abs(grids[[1]]$coords$x[geos] - unique(grids[[1]]$coords$x[which(grids[[1]]$coords$edge == 1)])))[1:round((nrow(pop[[1]])*cutoff))]}
-      if(x == 3){potential_migrants <- order(abs(grids[[4]]$coords$y[geos] - unique(grids[[4]]$coords$y[which(grids[[4]]$coords$edge == 1)])))[1:round((nrow(pop[[4]])*cutoff))]}
-      if(x == 4){potential_migrants <- order(abs(grids[[3]]$coords$y[geos] - unique(grids[[3]]$coords$y[which(grids[[3]]$coords$edge == 1)])))[1:round((nrow(pop[[3]])*cutoff))]}
+      #store all imigration events from all regiolects within immigration
+      immigration_events <- do.call(rbind, lapply(as.numeric(which(num_imm_per_regio > 0)), function(y){
+        #store learners who live closest to the edge who will have one immigrant demonstrator
+        if(immigration$dest_edge[y, x] == "R"){edge_birds <- order(grids[[x]]$coords$x[geos], decreasing = TRUE)[1:num_imm_per_regio[y]]}
+        if(immigration$dest_edge[y, x] == "L"){edge_birds <- order(grids[[x]]$coords$x[geos], decreasing = FALSE)[1:num_imm_per_regio[y]]}
+        if(immigration$dest_edge[y, x] == "T"){edge_birds <- order(grids[[x]]$coords$y[geos], decreasing = TRUE)[1:num_imm_per_regio[y]]}
+        if(immigration$dest_edge[y, x] == "B"){edge_birds <- order(grids[[x]]$coords$y[geos], decreasing = FALSE)[1:num_imm_per_regio[y]]}
+        
+        #store pool of potential migrant demonstrators who are on edge of neighboring territory
+        if(immigration$source_edge[y, x] == "R"){potential_migrants <- pop[[y]]$syls[order(grids[[y]]$coords$x[pop[[y]]$geo], decreasing = TRUE)[1:(nrow(pop[[y]])*cutoff)]]}
+        if(immigration$source_edge[y, x] == "L"){potential_migrants <- pop[[y]]$syls[order(grids[[y]]$coords$x[pop[[y]]$geo], decreasing = FALSE)[1:(nrow(pop[[y]])*cutoff)]]}
+        if(immigration$source_edge[y, x] == "T"){potential_migrants <- pop[[y]]$syls[order(grids[[y]]$coords$y[pop[[y]]$geo], decreasing = TRUE)[1:(nrow(pop[[y]])*cutoff)]]}
+        if(immigration$source_edge[y, x] == "B"){potential_migrants <- pop[[y]]$syls[order(grids[[y]]$coords$y[pop[[y]]$geo], decreasing = FALSE)[1:(nrow(pop[[y]])*cutoff)]]}
+        
+        #return a data table where each row is an edge bird, and the potential migrants are stored separately for each edge bird
+        #this seems excessive, but the reasoning is that it allows us to combine all immigration events from all source regiolects in a single object
+        return(data.table::data.table(edge_birds = edge_birds, potential_migrants = lapply(1:length(edge_birds), function(z){potential_migrants})))
+      }))
+      immigration_events <- immigration_events[-which(duplicated(immigration_events$edge_birds)), ]
       
       #construct data table with new birds
-      data.table::data.table(syls = lapply(1:(pop_sizes[[x]][i]-nrow(pop[[x]])), function(y){learn(ind = x, pop, grids, mig_mat, edge_birds = y %in% edge_birds, potential_migrants, geos[y], dems, rep_size, total_possible_syls, mu, frequency, attr, content, cutoff)}), geo = geos)
+      data.table::data.table(syls = lapply(1:(pop_sizes[[x]][i]-nrow(pop[[x]])), function(y){
+        #if this bird will learn from a migrant demonstrator, then store all possible migrant demonstrators
+        if(y %in% immigration_events$edge_birds){
+          potential_migrants <- immigration_events$potential_migrants[match(y, immigration_events$edge_birds)]
+        } else{
+          potential_migrants <- NULL
+        }
+        
+        #learning occurs
+        learn(ind = x, pop, grids, mig_mat, potential_migrants, geos[y], dems, rep_size, total_possible_syls, mu, frequency, attr, content, cutoff)
+      }), geo = geos)
     })
 
     #add new generation to existing population

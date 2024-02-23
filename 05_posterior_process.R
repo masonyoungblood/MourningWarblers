@@ -206,14 +206,14 @@ valid <- read.csv("04_bayesflow_analysis/validation_loss.csv")
 valid <- valid$Loss
 
 #training loss is raw while validation loss is the final value for each epoch, so divide raw loss values into the 200 epochs for averaging
-to_avg <- length(loss)/500
+to_avg <- 2969
 
 #compute median training loss for each epoch and restructure for plotting
 med_loss <- sapply(1:500, function(x){
   inds <- ((to_avg*(x-1))+1):(to_avg*x)
   median(loss[inds])
 })
-plot_data <- data.frame(loss = med_loss, valid = valid, epoch = c(1:500))
+plot_data <- data.frame(loss = med_loss, valid = valid[1:500], epoch = c(1:500))
 
 #save plot of loss curves
 png(paste0("figures/loss_curve.png"), width = 7, height = 3, units = "in", res = 600)
@@ -221,7 +221,8 @@ ggplot(plot_data, aes(x = epoch)) +
   geom_line(aes(y = valid), color = "gray60") + 
   geom_line(aes(y = loss), color = "black") + 
   scale_x_continuous(name = "Epoch") + 
-  scale_y_continuous(name = "Median Training Loss", sec.axis = sec_axis(~., "Validation Loss")) + 
+  scale_y_continuous(name = "Median Training Loss", sec.axis = sec_axis(~., "Validation Loss"), 
+                     limits = c(min(med_loss)-1, max(med_loss)+1)) + 
   theme_linedraw() + 
   theme(axis.title.y.right = element_text(color = "gray60"))
 dev.off()

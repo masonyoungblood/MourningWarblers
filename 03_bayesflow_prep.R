@@ -48,8 +48,8 @@ scaled_priors <- scale(priors_and_simulations[[1]])
 priors <- lapply(1:n_sim, function(x){as.numeric(scaled_priors[x, ])})
 
 #save data for bayesflow
-train_data <- list(priors[1:49000], formatted_simulations[1:49000])
-test_data <- list(priors[49001:50000], formatted_simulations[49001:50000])
+train_data <- list(priors[1:95000], formatted_simulations[1:95000])
+test_data <- list(priors[95001:100000], formatted_simulations[95001:100000])
 jsonlite::write_json(train_data, "04_bayesflow_analysis/train_data.json")
 jsonlite::write_json(test_data, "04_bayesflow_analysis/test_data.json")
 jsonlite::write_json(list(formatted_obs), "04_bayesflow_analysis/obs_data.json")
