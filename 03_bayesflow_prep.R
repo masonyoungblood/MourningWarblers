@@ -27,6 +27,9 @@ formatted_simulations <- lapply(1:n_sim, function(x){
   })
 })
 
+#set total number of possible types based on output from simulations
+total_possible_syls <- length(formatted_simulations[[1]][[1]][[1]])
+
 #format observed data to match simulated data during inference
 formatted_obs <- lapply(1:4, function(y){
   if(y == 1){reg <- "west"}
@@ -36,12 +39,11 @@ formatted_obs <- lapply(1:4, function(y){
   lapply(c(2005, 2019), function(x){
     temp <- regiolects$n[which(regiolects$regio == reg & regiolects$year == x)]
     temp <- (temp - sim_min)/(sim_max - sim_min)
-    return(c(temp, rep(0, length(types) - length(temp))))
+    return(c(temp, rep(0, total_possible_syls - length(temp))))
   })
 })
 
 #correct column names and scale
-colnames(priors_and_simulations[[1]])[1] <- c("n_init")
 scaled_priors <- scale(priors_and_simulations[[1]])
 
 #restructure priors so it's compatible with json format

@@ -43,7 +43,7 @@ learn <- function(ind, pop, grids, mig_mat, potential_migrants, geo, dems, rep_s
 #mig_mat is a matrix of migration probabilities, where rows are the source and columns are the destination, in the same order as geo_res
 #the model assumes that migration only occurs between west and east, and between newfoundland and nova scotia
 #specify model
-model <- function(n_init = c(1000, 1000, 1000, 1000), pop_rate = 0.989, mortality = 0.5, geo_res = list(c(50, 20), c(50, 20), c(10, 10), c(10, 10)), regio_dists,
+model <- function(n_init = c(1000, 1000, 1000, 1000), pop_rate = 0.989, mortality = 0.5, geo_res = list(c(50, 20), c(50, 20), c(10, 10), c(10, 10)), regio_dists, total_possible_syls,
                   years = c(1985, 2006, 2018), inds_to_sample = list(c(60, 164, 181), c(76, 219, 227), c(47, 92, 100), c(13, 24, 32)), 
                   dems = c(3, 3, 3, 3), rep_size = 3, mu = 0.01, frequency = c(1, 1, 1, 1), content = c(0, 0, 0, 0), cutoff = 0.1){
   #set up immigration object, where rows are sources and columns are destinations, in the same order as geo_res
@@ -54,9 +54,6 @@ model <- function(n_init = c(1000, 1000, 1000, 1000), pop_rate = 0.989, mortalit
   source_edge <- matrix(c(NA, "L", NA, NA, "R", NA, "L", NA, NA, NA, NA, "T", NA, NA, "B", NA), 4, 4, dimnames = list(c("west", "east", "newf", "nova"), c("west", "east", "newf", "nova")))
   dest_edge <- matrix(c(NA, "R", NA, NA, "L", NA, "R", NA, NA, NA, NA, "B", NA, NA, "T", NA), 4, 4, dimnames = list(c("west", "east", "newf", "nova"), c("west", "east", "newf", "nova")))
   immigration <- list(imm_prob = imm_prob, source_edge = source_edge, dest_edge = dest_edge)
-  
-  #calculate total number of possible syllables
-  total_possible_syls <- length(regio_dists[[1]])
   
   #generate grids for each regiolect
   grids <- lapply(1:4, function(x){
